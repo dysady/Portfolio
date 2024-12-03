@@ -2,6 +2,10 @@ const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
+const { promises } = require('dns');
+
+const IArenforcement = require('./IA/IArenforcement'); // Chemin relatif au fichier
+const IAaleatoire = require('./IA/IAaleatoire');       // Chemin relatif au fichier
 
 //const db = require('../database/config/postgresql');
 
@@ -25,6 +29,9 @@ const energieShieldA = 1.2;
 const energieShieldE = 1;
 const energieAttack = 15;
 const energieShoot = 8;
+const mechaSpeed = 0.1;
+let multSpeed = 1;
+const mapSize = 50;
 const currentTimestamp = Date.now(); // Récupère l'heure actuelle
 let mechas = {};
 let mechaBot = {
@@ -189,7 +196,7 @@ function isInFront(attacker, target) {
   return angleDifference <= Math.PI / 2 || angleDifference >= 3 * Math.PI / 2;
 }
 
-// Fonction pour récupérer les méchas proches dans un rayon de 70 unités
+// Fonction pour récupérer les méchas proches dans un rayon de 50 unités
 function Near(mechas, targetMechaId) {
   const targetMecha = mechas[targetMechaId];
   if (!targetMecha) {
@@ -222,10 +229,11 @@ function attack(attackerId) {
   if (!attacker) return; // Vérification de sécurité
 
   const attackerPosition = attacker.position;
-  const attackerRotationY = attacker.rotation.y; // Orientation en radians
+  //const attackerRotationY = attacker.rotation.y; // Orientation en radians
 
   for (let targetId in mechas) {
       if (targetId !== attackerId) {
+          //console.log(targetId,attackerId);
           const target = mechas[targetId];
           const distance = getDistance(attackerPosition, target.position);
           // Vérifier si le mécha cible est à moins de 10 unités de distance
@@ -385,7 +393,102 @@ async function updateMechaEnergieEverySecond() {
 
 // Lancer la mise à jour continue
 updateMechaHealthEverySecond();
-updateMechaEnergieEverySecond()
+updateMechaEnergieEverySecond();
+
+/////IA
+
+async function createMecha(id) {
+  // Fonction pour créer un mecha auto
+  const randomX = Math.random() * 20 - 10;  // Position X entre -10 et 10
+        const randomZ = Math.random() * 20 - 10;  // Position Z entre -10 et 10
+        const mechaData = {
+            id: id,
+            position: { x: randomX, y: 0, z: randomZ },
+            rotation: 0,
+            health: 100,
+            energie:1000,
+            blockTir: false,
+            blockAttack:false,
+            flame:false,
+            cdAttack:0,
+            cdShoot:0,
+        };
+        mechas[id] = mechaData;
+  //console.log("create : ", id);
+}
+
+const desiredRefreshPerSec = 60;
+const refreshDelay = 1000 / desiredRefreshPerSec;
+const mechaIA = [{id:"ia1",strat:new IArenforcement()},{id:"ia2", strat:new IAaleatoire()}];
+
+async function runIA(mechaIA) {
+  while (true) {
+    for (const element of mechaIA) {
+      // Si le mecha n'existe pas encore, on le crée
+      if (!mechas[element.id]) {
+        await createMecha(element.id);  // Appel à la création du mecha
+      }
+      
+      const gameState = {near: Near(mechas, element.id),bullets:bullets};
+
+      let keys = element.strat.act(gameState);
+      
+      if (mechas[element.id]) {
+        mechas[element.id].rotation = keys.rotation;
+        if (keys.esp && mechas[element.id].energie>energieAux) {
+          mechas[element.id].energie += -energieAux;
+          multSpeed = 1.7;
+        }else{
+          multSpeed = 1;
+        }
+        if (keys.z && mechas[element.id].position.z -mechaSpeed * multSpeed>-mapSize+1) mechas[element.id].position.z -= mechaSpeed * multSpeed;
+        if (keys.s && mechas[element.id].position.z + mechaSpeed * multSpeed<mapSize-1) mechas[element.id].position.z += mechaSpeed * multSpeed;
+        if (keys.q && mechas[element.id].position.x - mechaSpeed * multSpeed >-mapSize+1) mechas[element.id].position.x -= mechaSpeed * multSpeed;
+        if (keys.d && mechas[element.id].position.x + mechaSpeed * multSpeed<mapSize-1) mechas[element.id].position.x += mechaSpeed * multSpeed;
+        if (keys.a && mechas[element.id].energie>energieShieldA) {
+          mechas[element.id].energie += -energieShieldA;
+          mechas[element.id].blockAttack = keys.a;
+        }else{
+          mechas[element.id].blockAttack = false;
+        }
+        if (keys.e && mechas[element.id].energie>energieShieldE) {
+          mechas[element.id].energie += -energieShieldE;
+          mechas[element.id].blockTir = keys.e;
+        }else{
+          mechas[element.id].blockTir = false;
+        }
+        const currentTimestamp = Date.now();
+        if (keys.attack && mechas[element.id].energie>energieAttack) {
+          if (currentTimestamp - mechas[element.id].cdAttack >= cooldownAttack) {
+            mechas[element.id].flame=true;
+          }else{
+            mechas[element.id].flame=false;
+          }
+        }else{
+          mechas[element.id].flame=false;
+        }
+        
+        if (mechas[element.id].flame) {
+            mechas[element.id].energie += -energieAttack;
+            attack(element.id);
+            mechas[element.id].cdAttack = currentTimestamp;
+        }
+        if (keys.shoot && mechas[element.id].energie>energieShoot) {
+          if (currentTimestamp - mechas[element.id].cdShoot >= cooldownShoot) {
+            mechas[element.id].energie += -energieShoot;
+            shoot(element.id);
+            mechas[element.id].cdShoot = currentTimestamp;
+          }
+        }
+      }else {
+        console.log("error BOT introuvable");
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, refreshDelay));
+  }
+}
+
+runIA(mechaIA);
 
 // Exporter le serveur pour l'utiliser dans le fichier `server.js`
 module.exports = { app, server };

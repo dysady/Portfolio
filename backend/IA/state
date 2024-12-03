@@ -1,0 +1,19 @@
+let state = {
+  position: { x: 1, y: 0, z: 3 },
+  health: 100,
+  energy: 100,
+  enemies: [
+    { id: 1, position: { x: 2, y: 0, z: 5 }, health: 70 },
+    { id: 2, position: { x: -3, y: 0, z: 7 }, health: 50 },
+  ],
+  projectiles: [
+    { id: 1, position: { x: 1, y: 0, z: 10 }, direction: 0 },
+  ],
+  cooldowns: { attack: 0, shoot: 0 },
+  blockTir: false,
+  blockAttack: false,
+  flame: false,
+};
+
+
+let keys = { z: false, q: false, s: false, d: false, a:false, e:false, esp:false, attack:false, shoot:false};

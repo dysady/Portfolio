@@ -1,4 +1,4 @@
-
+//bug bouclier à la mort, detruire les bouclier
 const socket = io();  // Connecte au serveur Socket.IO
 
 const regenEnergie = 1;
@@ -72,6 +72,7 @@ function getObs() {
         deleteMyMecha();
         deleteMecha(obsMechaId);
         obsMechaId = mechaData.id;
+        deleteMecha(obsMechaId);
         createMecha(obsMechaId,mechaData.position.x, mechaData.position.y, mechaData.position.z, mechaData.rotation, mechaData.health,mechaData.energie, 0x0000ff);
         setCamMecha(obsMechaId);
         //console.log("obs : ", obsMechaId);
@@ -361,7 +362,7 @@ function launchFlame(idMecha) {
     const flameGroup = new THREE.Group();
     
     // Créer la géométrie du cône représentant la flamme
-    const flameGeometry = new THREE.ConeGeometry(5, 4, 32, 1, true, 0, Math.PI ); // Cône avec 120° d'ouverture (Math.PI / 3)
+    const flameGeometry = new THREE.ConeGeometry(7, 5, 32, 1, true, 0, Math.PI ); // Cône avec 120° d'ouverture (Math.PI / 3)
     const flameMaterial = new THREE.MeshBasicMaterial({
         color: 0xff6600, // Couleur de la flamme (orange)
         opacity: 0.8, // Transparence
@@ -544,6 +545,9 @@ function moveMechaUser() {
         }
     }
     // Envoie la position au serveur pour la synchronisation
+    if (mecha[userMechaId]) {
+        console.log(mecha[userMechaId].rotation.y);
+    }
     socket.emit('updateMechaPosition', {mecha: {id: userMechaId,position: mecha[userMechaId].position, rotation: mecha[userMechaId].rotation.y,health: mecha[userMechaId].health}, Attack: keys.attack,Shoot: keys.shoot, Esp: keys.esp, ShieldA:keys.a, ShieldE:keys.e});
 }
 
