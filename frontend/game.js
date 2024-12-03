@@ -545,9 +545,6 @@ function moveMechaUser() {
         }
     }
     // Envoie la position au serveur pour la synchronisation
-    if (mecha[userMechaId]) {
-        console.log(mecha[userMechaId].rotation.y);
-    }
     socket.emit('updateMechaPosition', {mecha: {id: userMechaId,position: mecha[userMechaId].position, rotation: mecha[userMechaId].rotation.y,health: mecha[userMechaId].health}, Attack: keys.attack,Shoot: keys.shoot, Esp: keys.esp, ShieldA:keys.a, ShieldE:keys.e});
 }
 

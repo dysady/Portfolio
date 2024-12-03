@@ -8,7 +8,7 @@ class IAaleatoire{
         const randomBool = () => Math.random() > 0.8;
 
         // Fonction utilitaire pour choisir une direction de rotation aléatoire (-1, 0, 1)
-        const randomRotation = () => Math.floor(Math.random() * 3) - 1; // -1 (gauche), 0 (pas de rotation), 1 (droite)
+        const randomRotation = () => Math.floor(Math.random() * 2 * Math.PI) - Math.PI; // -1 (gauche), 0 (pas de rotation), 1 (droite)
 
         // Retourne des actions aléatoires
         return {
