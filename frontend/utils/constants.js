@@ -1,0 +1,1 @@
+// constante pour les réglage du jeu

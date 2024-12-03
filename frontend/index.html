@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Buckel</title>
+
+    <!-- Liens vers les feuilles de style CSS -->
+    <link rel="stylesheet" href="/styles/main.css">
+
+    <!-- Métadonnées et favicon -->
+    <link rel="icon" href="/images/icon.png" type="image/png">
+</head>
+
+<body>
+    <!-- Conteneur du jeu en arrière-plan -->
+    <div id="game-background">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    </div>
+    <div id="barre">
+        <button id="test-button">Tester</button>
+        <div id="barreEnergieVide"><div id="barreEnergie"></div></div>
+        
+    </div>
+
+    <!-- Section d'introduction (Header) -->
+    <header id="intro">
+        <div class="content">
+            <h1>Bienvenue !</h1>
+            <h1>Portfolio : Angely Buckel</h1>
+            <p>Mieux que des mots: une démo !</p>
+        </div>
+    </header>
+
+
+    <!-- Contenu principal du portfolio -->
+    <main id="portfolio">
+        <section>
+            <h2>À propos de moi</h2>
+            <p>Je rêve de devenir un data ingénieur spécialisé en gestion de bases de données et IA.</p>
+        </section>
+
+        <section>
+            <h2>Mes Projets</h2>
+            <p>Découvrez quelques-uns de mes projets récents qui mettent en valeur mes compétences.</p>
+        </section>
+
+        <section>
+            <h2>Contactez-moi</h2>
+            <p>Pour plus d'informations ou pour travailler ensemble, contactez-moi via mes réseaux sociaux ou par email.</p>
+        </section>
+    </main>
+    
+    <!-- Scripts nécessaires -->
+
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.0.1/dist/socket.io.min.js"></script>
+    <script src="/game.js"></script>
+    <script src="/scripts/scroll-effects.js"></script>
+</body>
+
+</html>
+
