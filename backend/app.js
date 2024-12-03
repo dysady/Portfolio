@@ -422,6 +422,7 @@ const refreshDelay = 1000 / desiredRefreshPerSec;
 const mechaIA = [{id:"ia1",strat:new IArenforcement()},{id:"ia2", strat:new IAaleatoire()}];
 
 async function runIA(mechaIA) {
+  try {
   while (true) {
     for (const element of mechaIA) {
       // Si le mecha n'existe pas encore, on le crée
@@ -485,6 +486,15 @@ async function runIA(mechaIA) {
       }
     }
     await new Promise(resolve => setTimeout(resolve, refreshDelay));
+  }
+  } catch (error) {
+    console.error("Erreur dans runIA :", error);
+
+    // Attendre un moment avant de redémarrer
+    await new Promise(resolve => setTimeout(resolve, 5000)); // 5 secondes d'attente
+
+    // Redémarrer la fonction runIA
+    runIA(mechaIA);
   }
 }
 
