@@ -21,8 +21,9 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 ///////////////// INDEX fin ///////////
-const cooldownAttack = 500;
-const cooldownShoot = 100;
+const gameSpeed = 1;
+const cooldownAttack = 500/gameSpeed;
+const cooldownShoot = 100/gameSpeed;
 const regenEnergie = 1;
 const energieAux = 0.3;
 const energieShieldA = 1.2;
@@ -46,7 +47,7 @@ let mechaBot = {
   cdAttack:0,
   cdShoot:0,
 };
-mechas['testbot'] = mechaBot;
+//mechas['testbot'] = mechaBot;
 
 // Serveur de fichiers statiques
 app.use(express.static('public'));
@@ -213,7 +214,6 @@ function Near(mechas, targetMechaId) {
           }
       }
   }
-
   return nearbyMechas;  // Retourner le dictionnaire des méchas proches
 }
 
@@ -240,32 +240,21 @@ function attack(attackerId) {
           if (distance <= 5) {
               // Vérifier si le mécha cible est à 180 degrés devant le mécha attaquant
               if (isInFront(attacker, target)) {
+                let point=2;
                 if (!target.blockAttack) {
                   target.health -= 20; // Réduire les points de vie
+                  point+=6;
                 }
                   // Si la santé tombe à 0 ou en dessous
                   if (target.health <= 0) {
                       console.log(`${targetId} a été détruit par ${attackerId}`);
                       delete mechas[targetId];
                       io.emit('mechaDestroyed', ( targetId )); // Informer tous les clients
-                      if (targetId=="testbot") {
-                        let mechaBot = {
-                          id: 'testbot',
-                          position: { x: 0, y: 0, z: 0 },
-                          rotation: 0,
-                          health: 100,
-                          energie:10000000,
-                          blockTir: false,
-                          blockAttack:false,
-                          flame:false,
-                          cdAttack:0,
-                          cdShoot:0,
-                        };
-                        mechas['testbot'] = mechaBot;
-                      }
-                  } else {
+                      point+=30;
+                    } else {
                       io.emit('mechaDamaged', { targetId, health: target.health }); // Informer les clients
                   }
+                  return point;
               }
           }
       }
@@ -277,7 +266,7 @@ const bullets = {};
 function shoot(attackerId) {
   const attacker = mechas[attackerId];
 
-  if (!attacker) return; // Vérification de sécurité
+  if (!attacker) return 0; // Vérification de sécurité
 
   const bulletId = `${attackerId}_${Date.now()}`; // Identifiant unique pour la balle
   const position = { ...attacker.position };
@@ -288,22 +277,22 @@ function shoot(attackerId) {
       position: position,
       direction: { x: Math.sin(rotationY), z: Math.cos(rotationY) },
       attackerId: attackerId,
-      lifetime: 2000, // Durée de vie en ms
+      lifetime: 2000/gameSpeed, // Durée de vie en ms
   };
 
   //console.log(`Shoot: ${attackerId} a tiré un projectile: ${mechas[attackerId].energie}`);
 
   // Met à jour la position de la balle pendant sa durée de vie
-  updateBullet(bulletId);
+  return updateBullet(bulletId);
 }
 
 function updateBullet(bulletId) {
   const bullet = bullets[bulletId];
 
-  if (!bullet) return;
+  if (!bullet) return 0;
 
   const speed = 2; // Vitesse de la balle
-  const interval = 50; // Intervalle de mise à jour en ms
+  const interval = 50/gameSpeed; // Intervalle de mise à jour en ms
 
   const bulletInterval = setInterval(() => {
       // Avance la balle en ligne droite
@@ -316,36 +305,24 @@ function updateBullet(bulletId) {
               const target = mechas[targetId];
               if (getDistance(bullet.position, target.position) <= 1) { // Si la balle touche un mécha
                 io.emit('endBullet', bulletId);
+                  let point = 1;
                   if (!target.blockTir) {
                     target.health -= 5;
+                    point+=4
                   }
                 
                   if (target.health <= 0) {
+                    point += 25;
                       target.health = 0;
                       console.log(`${targetId} a été détruit par un tir de ${bullet.attackerId}`);
                       delete mechas[targetId];
                       io.emit('mechaDestroyed', ( targetId )); // Informer tous les clients
-                      if (targetId=="testbot") {
-                        let mechaBot = {
-                          id: 'testbot',
-                          position: { x: 0, y: 0, z: 0 },
-                          rotation: 0,
-                          health: 100,
-                          energie:10000000,
-                          blockTir: false,
-                          blockAttack:false,
-                          flame:false,
-                          cdAttack:0,
-                          cdShoot:0,
-                        };
-                        mechas['testbot'] = mechaBot;
-                      }
                   }
                   //console.log(`Shoot: ${bullet.attackerId} a infligé 5 dégâts à ${targetId}`);
                   io.emit('mechaDamaged', { targetId, health: target.health }); // Informer les clients
                   clearInterval(bulletInterval); // Arrêter la balle
                   delete bullets[bulletId]; // Supprimer la balle
-                  return;
+                  return point;
               }
           }
       }
@@ -373,7 +350,7 @@ async function updateMechaHealthEverySecond() {
               mechas[id].health+=0.2; // Met à jour l'affichage de la barre de vie
           }
       }
-      await new Promise(resolve => setTimeout(resolve, 100)); // Attendre 1 seconde
+      await new Promise(resolve => setTimeout(resolve, 100/gameSpeed)); // Attendre 1 seconde
   }
 }
 
@@ -387,7 +364,7 @@ async function updateMechaEnergieEverySecond() {
       }
       //attack("testbot");
       //shoot("testbot");
-      await new Promise(resolve => setTimeout(resolve, 100)); // Attendre 1 seconde
+      await new Promise(resolve => setTimeout(resolve, 100/gameSpeed)); // Attendre 1 seconde
   }
 }
 
@@ -418,8 +395,8 @@ async function createMecha(id) {
 }
 
 const desiredRefreshPerSec = 60;
-const refreshDelay = 1000 / desiredRefreshPerSec;
-const mechaIA = [{id:"ia1",strat:new IArenforcement()},{id:"ia2", strat:new IAaleatoire()}];
+const refreshDelay = 1000 / desiredRefreshPerSec / gameSpeed;
+const mechaIA = [{id:"iaRenforcement1",strat:new IArenforcement()},{id:"ia2", strat:new IArenforcement()},{id:"ia3", strat:new IArenforcement()},{id:"ia4", strat:new IArenforcement()},{id:"ia5", strat:new IAaleatoire()}];
 
 async function runIA(mechaIA) {
   try {
@@ -429,13 +406,14 @@ async function runIA(mechaIA) {
       if (!mechas[element.id]) {
         await createMecha(element.id);  // Appel à la création du mecha
       }
-      
-      const gameState = {near: Near(mechas, element.id),bullets:bullets};
+      let reward = 0;
+      const gameState = {mecha:mechas[element.id] ,near: Near(mechas, element.id),bullets:bullets};
 
       let keys = element.strat.act(gameState);
       
       if (mechas[element.id]) {
-        mechas[element.id].rotation = keys.rotation;
+        mechas[element.id].rotation = keys.rotation * Math.PI;
+        
         if (keys.esp && mechas[element.id].energie>energieAux) {
           mechas[element.id].energie += -energieAux;
           multSpeed = 1.7;
@@ -446,18 +424,22 @@ async function runIA(mechaIA) {
         if (keys.s && mechas[element.id].position.z + mechaSpeed * multSpeed<mapSize-1) mechas[element.id].position.z += mechaSpeed * multSpeed;
         if (keys.q && mechas[element.id].position.x - mechaSpeed * multSpeed >-mapSize+1) mechas[element.id].position.x -= mechaSpeed * multSpeed;
         if (keys.d && mechas[element.id].position.x + mechaSpeed * multSpeed<mapSize-1) mechas[element.id].position.x += mechaSpeed * multSpeed;
+        
         if (keys.a && mechas[element.id].energie>energieShieldA) {
           mechas[element.id].energie += -energieShieldA;
           mechas[element.id].blockAttack = keys.a;
+          reward+=-40;
         }else{
           mechas[element.id].blockAttack = false;
         }
         if (keys.e && mechas[element.id].energie>energieShieldE) {
           mechas[element.id].energie += -energieShieldE;
           mechas[element.id].blockTir = keys.e;
+          reward+=-40;
         }else{
           mechas[element.id].blockTir = false;
         }
+
         const currentTimestamp = Date.now();
         if (keys.attack && mechas[element.id].energie>energieAttack) {
           if (currentTimestamp - mechas[element.id].cdAttack >= cooldownAttack) {
@@ -471,16 +453,25 @@ async function runIA(mechaIA) {
         
         if (mechas[element.id].flame) {
             mechas[element.id].energie += -energieAttack;
-            attack(element.id);
+            reward+=attack(element.id);
             mechas[element.id].cdAttack = currentTimestamp;
         }
         if (keys.shoot && mechas[element.id].energie>energieShoot) {
           if (currentTimestamp - mechas[element.id].cdShoot >= cooldownShoot) {
             mechas[element.id].energie += -energieShoot;
-            shoot(element.id);
+            reward+=shoot(element.id);
             mechas[element.id].cdShoot = currentTimestamp;
           }
         }
+
+        //if (element.strat instanceof  IArenforcement) {
+          //if (mechas[element.id].previousHealth > mechas[element.id].health) {
+          //  reward+=-mechas[element.id].previousHealth-mechas[element.id].health;
+          //}
+          element.strat.previousReward = reward;
+          
+          //mechas[element.id]['previousHealth'] = mechas[element.id].health;
+        //}
       }else {
         console.log("error BOT introuvable");
       }

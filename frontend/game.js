@@ -207,7 +207,7 @@ function createMecha(id,x,y,z,rotation = 0,health = 100, energie=100, color = 0x
     mecha[id].shield = {};
 
     scene.add(mecha[id]);
-    //console.log("mech add", id);
+    console.log("mecha created :", id);
     // Créer un canvas pour le texte de l'id
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
@@ -270,6 +270,8 @@ function createMecha(id,x,y,z,rotation = 0,health = 100, energie=100, color = 0x
 }
 
 function deleteMecha(id) {
+    deleteShield(id,"e");
+    deleteShield(id,"a");
     scene.remove(mecha[id]);
     delete mecha[id];
 }
@@ -337,9 +339,9 @@ function createShield(idMecha,idShield) {
   
     //console.log(`Bouclier ajouté pour le mécha ${idMecha}.`);
   }
-  function deleteShield(idMecha,idShield) {
+function deleteShield(idMecha,idShield) {
     if (!mecha[idMecha]) {
-      console.error(`Mecha avec l'ID ${idMecha} n'existe pas.`);
+      //console.error(`Mecha avec l'ID ${idMecha} n'existe pas.`);
       return;
     }
     // Vérifier si le mécha a un bouclier actif
@@ -618,6 +620,7 @@ socket.on('Obs_live',(nearbyMechasData)=>{
     for (const id in nearbyMechasData) {
         if (nearbyMechasData.hasOwnProperty(id)) {
             createOrUpdateMecha(nearbyMechasData[id]);
+            console.log(nearbyMechasData[id]);
         }
     }
     setCamMecha(obsMechaId);
