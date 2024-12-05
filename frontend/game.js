@@ -620,7 +620,7 @@ socket.on('Obs_live',(nearbyMechasData)=>{
     for (const id in nearbyMechasData) {
         if (nearbyMechasData.hasOwnProperty(id)) {
             createOrUpdateMecha(nearbyMechasData[id]);
-            console.log(nearbyMechasData[id]);
+            //console.log(nearbyMechasData[id]);
         }
     }
     setCamMecha(obsMechaId);

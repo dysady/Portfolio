@@ -6,6 +6,8 @@ const { promises } = require('dns');
 
 const IArenforcement = require('./IA/IArenforcement'); // Chemin relatif au fichier
 const IAaleatoire = require('./IA/IAaleatoire');       // Chemin relatif au fichier
+const IADQN = require('./IA/IADQN');
+const [getDistance,Near,getStateNorm,stateNorm] = require('./service');
 
 //const db = require('../database/config/postgresql');
 
@@ -34,7 +36,7 @@ const mechaSpeed = 0.1;
 let multSpeed = 1;
 const mapSize = 50;
 const currentTimestamp = Date.now(); // Récupère l'heure actuelle
-let mechas = {};
+const mechas = {};
 let mechaBot = {
   id: 'testbot',
   position: { x: 0, y: 0, z: 0 },
@@ -168,19 +170,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// Fonction pour calculer la distance euclidienne entre deux points
-function calculateDistance(position1, position2) {
-  const dx = position2.x - position1.x;
-  const dy = position2.y - position1.y;
-  const dz = position2.z - position1.z;
-  return Math.sqrt(dx * dx + dy * dy + dz * dz);
-}
-// Fonction pour calculer la distance entre deux positions
-function getDistance(pos1, pos2) {
-  const dx = pos1.x - pos2.x;
-  const dz = pos1.z - pos2.z;
-  return Math.sqrt(dx * dx + dz * dz);
-}
 // Fonction pour vérifier si la cible est devant l'attaquant
 function isInFront(attacker, target) {
   const dx = target.position.x - attacker.position.x;
@@ -195,26 +184,6 @@ function isInFront(attacker, target) {
 
   // Vérification si l'angle est à moins de 90 degrés (donc dans un cône de 180 degrés devant l'attaquant)
   return angleDifference <= Math.PI / 2 || angleDifference >= 3 * Math.PI / 2;
-}
-
-// Fonction pour récupérer les méchas proches dans un rayon de 50 unités
-function Near(mechas, targetMechaId) {
-  const targetMecha = mechas[targetMechaId];
-  if (!targetMecha) {
-      return {};  // Retourner un objet vide si le mécha cible n'existe pas
-  }
-
-  const nearbyMechas = {};
-  for (const id in mechas) {
-      if (mechas.hasOwnProperty(id) && id !== targetMechaId) {
-          const mecha = mechas[id];
-          const distance = calculateDistance(targetMecha.position, mecha.position);
-          if (distance <= 50) {
-              nearbyMechas[id] = mecha;
-          }
-      }
-  }
-  return nearbyMechas;  // Retourner le dictionnaire des méchas proches
 }
 
 // Gestion des promesses rejetées non gérées
@@ -374,7 +343,7 @@ updateMechaEnergieEverySecond();
 
 /////IA
 
-async function createMecha(id) {
+async function createMecha(id, currentTimestamp) {
   // Fonction pour créer un mecha auto
   const randomX = Math.random() * 20 - 10;  // Position X entre -10 et 10
         const randomZ = Math.random() * 20 - 10;  // Position Z entre -10 et 10
@@ -387,8 +356,8 @@ async function createMecha(id) {
             blockTir: false,
             blockAttack:false,
             flame:false,
-            cdAttack:0,
-            cdShoot:0,
+            cdAttack:currentTimestamp,
+            cdShoot:currentTimestamp,
         };
         mechas[id] = mechaData;
   //console.log("create : ", id);
@@ -396,20 +365,25 @@ async function createMecha(id) {
 
 const desiredRefreshPerSec = 60;
 const refreshDelay = 1000 / desiredRefreshPerSec / gameSpeed;
-const mechaIA = [{id:"iaRenforcement1",strat:new IArenforcement()},{id:"ia2", strat:new IArenforcement()},{id:"ia3", strat:new IArenforcement()},{id:"ia4", strat:new IArenforcement()},{id:"ia5", strat:new IAaleatoire()}];
-
+const stateSize = 114;  // Taille de l'état normalisé
+const actionSize = 10;   // Par exemple: rotation, déplacement, etc.
+const mechaIA = [{id:"iaRenforcement1",strat: new IADQN(stateSize, actionSize)},{id:"ia2", strat: new IADQN(stateSize, actionSize)},{id:"ia3", strat: new IADQN(stateSize, actionSize)},{id:"ia4", strat: new IADQN(stateSize, actionSize)}];
+//,{id:"ia5", strat:new IAaleatoire()}
 async function runIA(mechaIA) {
   try {
   while (true) {
     for (const element of mechaIA) {
       // Si le mecha n'existe pas encore, on le crée
+      const currentTimestamp = Date.now();
       if (!mechas[element.id]) {
-        await createMecha(element.id);  // Appel à la création du mecha
+        await createMecha(element.id, currentTimestamp);  // Appel à la création du mecha
       }
       let reward = 0;
-      const gameState = {mecha:mechas[element.id] ,near: Near(mechas, element.id),bullets:bullets};
-
-      let keys = element.strat.act(gameState);
+      const gameState = getStateNorm(element.id, mechas, bullets);
+      //console.log(gameState);
+      const keys = await element.strat.act(gameState);
+      //console.log(keys);
+      //let keys = element.strat.act(gameState);
       
       if (mechas[element.id]) {
         mechas[element.id].rotation = keys.rotation * Math.PI;
@@ -428,20 +402,21 @@ async function runIA(mechaIA) {
         if (keys.a && mechas[element.id].energie>energieShieldA) {
           mechas[element.id].energie += -energieShieldA;
           mechas[element.id].blockAttack = keys.a;
-          reward+=-40;
+          reward+=-1;
         }else{
           mechas[element.id].blockAttack = false;
         }
         if (keys.e && mechas[element.id].energie>energieShieldE) {
           mechas[element.id].energie += -energieShieldE;
           mechas[element.id].blockTir = keys.e;
-          reward+=-40;
+          reward+=-1;
         }else{
           mechas[element.id].blockTir = false;
         }
 
-        const currentTimestamp = Date.now();
+        
         if (keys.attack && mechas[element.id].energie>energieAttack) {
+          reward+=-1;
           if (currentTimestamp - mechas[element.id].cdAttack >= cooldownAttack) {
             mechas[element.id].flame=true;
           }else{
@@ -457,18 +432,36 @@ async function runIA(mechaIA) {
             mechas[element.id].cdAttack = currentTimestamp;
         }
         if (keys.shoot && mechas[element.id].energie>energieShoot) {
+          reward+=-1;
           if (currentTimestamp - mechas[element.id].cdShoot >= cooldownShoot) {
             mechas[element.id].energie += -energieShoot;
             reward+=shoot(element.id);
             mechas[element.id].cdShoot = currentTimestamp;
           }
         }
-
+        let previousHealth = mechas[element.id].health;
+        await delay(refreshDelay);
+        if (!mechas[element.id]) {
+          await createMecha(element.id, currentTimestamp);
+          reward+=-5;
+        }
+        if (previousHealth>mechas[element.id].health) {
+          reward+=-1;
+        }
+        const nextState = getStateNorm(element.id, mechas, bullets);
+        //console.log(nextState);
+        const done = checkIfDone(gameState);  // Vérifier si le jeu est terminé
+        //console.log("1");
+        element.strat.storeExperience(gameState, keys, reward, nextState, done);
+        //console.log("2");
+        await element.strat.train(32);  // Entraîner l'IA
+        //console.log("3");
+            // Appliquer l'action choisie à votre système ici
         //if (element.strat instanceof  IArenforcement) {
           //if (mechas[element.id].previousHealth > mechas[element.id].health) {
           //  reward+=-mechas[element.id].previousHealth-mechas[element.id].health;
           //}
-          element.strat.previousReward = reward;
+          //element.strat.previousReward = reward;
           
           //mechas[element.id]['previousHealth'] = mechas[element.id].health;
         //}
@@ -491,5 +484,12 @@ async function runIA(mechaIA) {
 
 runIA(mechaIA);
 
+function checkIfDone(gameState) {
+  return false;
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 // Exporter le serveur pour l'utiliser dans le fichier `server.js`
 module.exports = { app, server };

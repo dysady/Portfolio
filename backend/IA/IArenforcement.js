@@ -10,55 +10,7 @@ class IArenforcement{
         this.previousReward = 0;
     }
 
-    buildState(gameState) {
-        let mecha = gameState.mecha;
-      
-        // Informations du mecha
-        let state = [
-          mecha.position.x / 50,   // Position normalisée
-          mecha.position.z / 50,   // Position normalisée
-          mecha.health / 100,      // Santé normalisée
-          mecha.energie / 100,     // Énergie normalisée
-          mecha.cdAttack / 500,     // Cooldown d'attaque normalisé
-          mecha.cdShoot / 100       // Cooldown de tir normalisé
-        ];
-      
-        const nearArray = Object.values(gameState.near);  // Convertir en tableau
-        // Ajouter les caractéristiques des ennemis proches
-        nearArray.slice(0, 6).forEach(enemy => {
-          let dx = enemy.position.x - mecha.position.x;
-          let dz = enemy.position.z - mecha.position.z;
-          let distance = Math.sqrt(dx * dx + dz * dz);
-          let angle = Math.atan2(dz, dx);
-      
-          state.push(distance / 50);
-          state.push(angle / Math.PI);
-          state.push(enemy.health / 100);  // Santé de l'ennemi
-        });
-      
-
-        const nearArrayB = Object.values(gameState.bullets);
-        // Ajouter les caractéristiques des projectiles proches
-        nearArrayB.slice(0, 30).forEach(bullet => {
-          let dx = bullet.x - mecha.position.x;
-          let dz = bullet.z - mecha.position.z;
-          let distance = Math.sqrt(dx * dx + dz * dz);
-          let angle = Math.atan2(dz, dx);
-      
-          state.push(distance / 50);
-          state.push(angle / Math.PI);
-          state.push(bullet.direction);
-        });
-      
-        // Remplir avec des 0 si pas assez d'ennemis ou projectiles
-        while (state.length < 6 + 3 * 6 + 30 * 3) {
-          state.push(0);
-        }
-      
-        return state.join(','); // Convertir en string pour l'utiliser comme clé
-      }
-
-      initializeState(state) {
+    initializeState(state) {
         if (!this.Q[state]) {
             this.Q[state] = {
                 z: 0, q: 0, s: 0, d: 0, 
@@ -124,7 +76,7 @@ class IArenforcement{
     }
 
     act(gameState) {
-        let currentState = this.buildState(gameState);
+        let currentState = gameState;
         let selectedActions = this.chooseAction(currentState);
 
         // Si ce n'est pas le premier cycle
