@@ -4,6 +4,9 @@ const tf = require('@tensorflow/tfjs-node');
 
 class IADQN {
     constructor(stateSize, actionSize) {
+        if (IADQN.instance) {
+            return IADQN.instance; // Retourner l'instance existante
+        }
         this.stateSize = stateSize;  // Taille de l'état d'entrée
         this.actionSize = actionSize;  // Nombre d'actions possibles
         this.memory = [];  // Mémoire pour les expériences
@@ -16,6 +19,7 @@ class IADQN {
 
         // Initialiser le réseau neuronal
         this.model = this._buildModel();
+        IADQN.instance = this; // Définir l'instance unique
     }
 
     _buildModel() {
@@ -30,51 +34,65 @@ class IADQN {
     async act(state) {
       // Si l'exploration est activée (selon epsilon), choisir une action aléatoire
       if (Math.random() <= this.epsilon) {
-          const randomActionIndex = Math.floor(Math.random() * this.actionSize);
-          //console.log(randomActionIndex);
-          return this._actionToDict(randomActionIndex);
-      }
+        // Générer un tableau de `this.actionSize - 1` booléens avec 30% de probabilité pour `true`
+        const randomBooleans = Array.from({ length: this.actionSize - 1 }, () => Math.random() < 0.03);
+        
+        // Ajouter un float entre -1 et 1 comme dernière valeur
+        const randomFloat = Math.random() * 2 - 1;
+    
+        // Combiner les deux pour former le tableau final
+        const randomActionIndex = [...randomBooleans, randomFloat];
+        
+        //console.log("Random Action Index:", randomActionIndex);
+        return this._actionToDict(randomActionIndex);
+    }
       // Sinon, choisir l'action avec la plus grande valeur Q (exploitation)
       const stateTensor = tf.tensor2d([state]);
       const qValues = await this.model.predict(stateTensor).array();
-      const bestActionIndex = qValues[0].indexOf(Math.max(...qValues[0]));
-      console.log(bestActionIndex);
+      // Transformer qValues en tableau de booléens avec traitement spécifique pour la dernière valeur
+        const bestActionIndex = qValues[0].map((value, index) => {
+            if (index === qValues[0].length - 1) {
+                // Si c'est la dernière valeur, on l'ajoute telle quelle
+                return value;
+            }
+            // Sinon, ajouter true ou false selon la condition
+            return value > 0;
+        });
+
+        //console.log("Transformed bestActionIndex:", bestActionIndex);
+
       return this._actionToDict(bestActionIndex);
   }
   
-  // Convertir l'index de l'action en un dictionnaire d'actions
-  _actionToDict(actionIndex) {
-      // Créer un dictionnaire avec toutes les actions à 'false'
-      const actionDict = {
-          z: false,
-          q: false,
-          s: false,
-          d: false,
-          esp: false,
-          a: false,
-          e: false,
-          attack: false,
-          shoot: false,
-          rotation: 0.0,
-      };
-  
-      // Activer l'action correspondante en fonction de l'index choisi
-      switch (actionIndex) {
-          case 0: actionDict.z = true; break;
-          case 1: actionDict.q = true; break;
-          case 2: actionDict.s = true; break;
-          case 3: actionDict.d = true; break;
-          case 4: actionDict.esp = true; break;
-          case 5: actionDict.a = true; break;
-          case 6: actionDict.e = true; break;
-          case 7: actionDict.attack = true; break;
-          case 8: actionDict.shoot = true; break;
-          case 9: actionDict.rotation = Math.random() * 2 - 1; break; // Rotation aléatoire entre -1 et 1
-          default: break;
-      }
-  
-      return actionDict;
-  }
+  // Convertir un tableau d'actions en un dictionnaire d'actions
+    _actionToDict(actionIndex) {
+        // Créer un dictionnaire avec toutes les actions initialisées
+        const actionDict = {
+            z: false,
+            q: false,
+            s: false,
+            d: false,
+            esp: false,
+            a: false,
+            e: false,
+            attack: false,
+            shoot: false,
+            rotation: 0.0,
+        };
+
+        // Transformer le tableau en valeurs pour le dictionnaire
+        const actionKeys = ['z', 'q', 's', 'd', 'esp', 'a', 'e', 'attack', 'shoot'];
+        actionKeys.forEach((key, index) => {
+            if (index < actionIndex.length - 1) {
+                actionDict[key] = actionIndex[index]; // Copier les booléens
+            }
+        });
+
+        // La dernière valeur est affectée à `rotation`
+        actionDict.rotation = actionIndex[actionIndex.length - 1];
+
+        return actionDict;
+    }
 
     // Stocker une expérience
     storeExperience(state, action, reward, nextState, done) {
@@ -88,6 +106,7 @@ class IADQN {
     // Entraîner le modèle à partir de la mémoire
     async train(batchSize = 32) {
         if (this.memory.length < batchSize) {
+            //console.log(this.memory.length,"\r");
             return;
         }
         const batch = this._sampleBatch(batchSize);

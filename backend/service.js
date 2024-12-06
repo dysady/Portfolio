@@ -38,7 +38,7 @@ function stateNorm(gameState) {
           mecha.position.x / 50,   // Position normalisée
           mecha.position.z / 50,   // Position normalisée
           mecha.health / 100,      // Santé normalisée
-          mecha.energie / 1000,     // Énergie normalisée
+          mecha.energie / 100,     // Énergie normalisée
           ((currentTimestamp-mecha.cdAttack-250) / 250 < 1) ? (currentTimestamp-mecha.cdAttack-250) / 250 : 1,     // Cooldown d'attaque normalisé
           ((currentTimestamp-mecha.cdShoot-50) / 50 < 1) ? (currentTimestamp-mecha.cdShoot-50) / 50 : 1     // Cooldown de tir normalisé
         ];

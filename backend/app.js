@@ -352,7 +352,7 @@ async function createMecha(id, currentTimestamp) {
             position: { x: randomX, y: 0, z: randomZ },
             rotation: 0,
             health: 100,
-            energie:1000,
+            energie: 100,
             blockTir: false,
             blockAttack:false,
             flame:false,
@@ -383,7 +383,6 @@ async function runIA(mechaIA) {
       //console.log(gameState);
       const keys = await element.strat.act(gameState);
       //console.log(keys);
-      //let keys = element.strat.act(gameState);
       
       if (mechas[element.id]) {
         mechas[element.id].rotation = keys.rotation * Math.PI;
@@ -402,21 +401,21 @@ async function runIA(mechaIA) {
         if (keys.a && mechas[element.id].energie>energieShieldA) {
           mechas[element.id].energie += -energieShieldA;
           mechas[element.id].blockAttack = keys.a;
-          reward+=-1;
+          reward+=-5;
         }else{
           mechas[element.id].blockAttack = false;
         }
         if (keys.e && mechas[element.id].energie>energieShieldE) {
           mechas[element.id].energie += -energieShieldE;
           mechas[element.id].blockTir = keys.e;
-          reward+=-1;
+          reward+=-5;
         }else{
           mechas[element.id].blockTir = false;
         }
 
         
         if (keys.attack && mechas[element.id].energie>energieAttack) {
-          reward+=-1;
+          reward+=-4;
           if (currentTimestamp - mechas[element.id].cdAttack >= cooldownAttack) {
             mechas[element.id].flame=true;
           }else{
@@ -432,7 +431,7 @@ async function runIA(mechaIA) {
             mechas[element.id].cdAttack = currentTimestamp;
         }
         if (keys.shoot && mechas[element.id].energie>energieShoot) {
-          reward+=-1;
+          reward+=-3;
           if (currentTimestamp - mechas[element.id].cdShoot >= cooldownShoot) {
             mechas[element.id].energie += -energieShoot;
             reward+=shoot(element.id);
@@ -443,10 +442,10 @@ async function runIA(mechaIA) {
         await delay(refreshDelay);
         if (!mechas[element.id]) {
           await createMecha(element.id, currentTimestamp);
-          reward+=-5;
+          reward+=-20;
         }
         if (previousHealth>mechas[element.id].health) {
-          reward+=-1;
+          reward+=-6;
         }
         const nextState = getStateNorm(element.id, mechas, bullets);
         //console.log(nextState);
@@ -454,7 +453,7 @@ async function runIA(mechaIA) {
         //console.log("1");
         element.strat.storeExperience(gameState, keys, reward, nextState, done);
         //console.log("2");
-        await element.strat.train(32);  // Entraîner l'IA
+        await element.strat.train(1000);  // Entraîner l'IA
         //console.log("3");
             // Appliquer l'action choisie à votre système ici
         //if (element.strat instanceof  IArenforcement) {
