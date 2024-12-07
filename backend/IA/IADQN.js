@@ -1,5 +1,6 @@
 // Dossier: ia_dqn/IADQN.js
 const tf = require('@tensorflow/tfjs-node');
+//inutilisable par des gpu amd: 
 //const tf = require('@tensorflow/tfjs-node-gpu');
 
 class IADQN {
