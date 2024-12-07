@@ -368,6 +368,7 @@ const refreshDelay = 1000 / desiredRefreshPerSec / gameSpeed;
 const stateSize = 114;  // Taille de l'état normalisé
 const actionSize = 10;   // Par exemple: rotation, déplacement, etc.
 const mechaIA = [{id:"iaRenforcement1",strat: new IADQN(stateSize, actionSize)},{id:"ia2", strat: new IADQN(stateSize, actionSize)},{id:"ia3", strat: new IADQN(stateSize, actionSize)},{id:"ia4", strat: new IADQN(stateSize, actionSize)}];
+//const mechaIA = [{id:"iaaleatoire", strat: new IAaleatoire()}];
 //,{id:"ia5", strat:new IAaleatoire()}
 async function runIA(mechaIA) {
   try {
@@ -447,6 +448,8 @@ async function runIA(mechaIA) {
         if (previousHealth>mechas[element.id].health) {
           reward+=-6;
         }
+
+        if (element.strat instanceof  IADQN) {
         const nextState = getStateNorm(element.id, mechas, bullets);
         //console.log(nextState);
         const done = checkIfDone(gameState);  // Vérifier si le jeu est terminé
@@ -455,15 +458,8 @@ async function runIA(mechaIA) {
         //console.log("2");
         await element.strat.train(1000);  // Entraîner l'IA
         //console.log("3");
-            // Appliquer l'action choisie à votre système ici
-        //if (element.strat instanceof  IArenforcement) {
-          //if (mechas[element.id].previousHealth > mechas[element.id].health) {
-          //  reward+=-mechas[element.id].previousHealth-mechas[element.id].health;
-          //}
-          //element.strat.previousReward = reward;
-          
-          //mechas[element.id]['previousHealth'] = mechas[element.id].health;
-        //}
+        }
+        
       }else {
         console.log("error BOT introuvable");
       }
