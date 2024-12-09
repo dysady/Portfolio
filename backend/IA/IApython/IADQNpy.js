@@ -1,10 +1,10 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-class IADQN {
+class IADQNpy {
     constructor(stateSize, actionSize) {
-        if (IADQN.instance) {
-            return IADQN.instance; // Retourner l'instance existante
+        if (IADQNpy.instance) {
+            return IADQNpy.instance; // Retourner l'instance existante
         }
         this.stateSize = stateSize;  // Taille de l'état d'entrée
         this.actionSize = actionSize;  // Nombre d'actions possibles
@@ -32,7 +32,7 @@ class IADQN {
     // Fonction pour appeler Python et obtenir l'action
     _callPythonForAction(state) {
         return new Promise((resolve, reject) => {
-            const pythonProcess = spawn('python3', [path.join(__dirname, 'ai_model.py')]);
+            const pythonProcess = spawn('python3', [path.join(__dirname, 'ai_model_dqn.py')]);
 
             // Envoyer l'état à Python sous forme JSON
             const input = {
@@ -71,7 +71,7 @@ class IADQN {
         return randomIndex;
     }
 
-    // Les autres méthodes de votre classe IADQN...
+    // Les autres méthodes de votre classe IADQNpy...
 }
 
-module.exports = IADQN;
+module.exports = IADQNpy;

@@ -1,16 +1,9 @@
-// Dossier: ia_dqn/IADQN.js
-const tf = require('@tensorflow/tfjs-node');
-//inutilisable par des gpu amd: 
-//const tf = require('@tensorflow/tfjs-node-gpu');
+const ort = require("onnxruntime-directml");
 
-//const ort = require("onnxruntime-directml"); // pas de training
-
-const postgresqlService = require('./postgresqlService');
-
-class IADQN {
+class IADQNgpu {
     constructor(stateSize, actionSize) {
-        if (IADQN.instance) {
-            return IADQN.instance; // Retourner l'instance existante
+        if (IADQNgpu.instance) {
+            return IADQNgpu.instance; // Retourner l'instance existante
         }
         this.stateSize = stateSize;  // Taille de l'état d'entrée
         this.actionSize = actionSize;  // Nombre d'actions possibles
@@ -24,7 +17,7 @@ class IADQN {
 
         // Initialiser le réseau neuronal
         this.model = this._buildModel();
-        IADQN.instance = this; // Définir l'instance unique
+        IADQNgpu.instance = this; // Définir l'instance unique
     }
 
     _buildModel() {
@@ -36,23 +29,12 @@ class IADQN {
         return model;
     }
 
-    async loadModelFromDB() {
-        this.model = await postgresqlService.loadModel('my_model');
-    }
-
-    async saveModelToDB() {
-
-        this.model = await postgresqlService.saveModel(this.model, 'modelTest');
-    }
-
     async act(state) {
       // Si l'exploration est activée (selon epsilon), choisir une action aléatoire
       if (Math.random() <= this.epsilon) {
         // Générer un tableau de `this.actionSize - 1` booléens avec 30% de probabilité pour `true`
         const randomBooleans = Array.from({ length: this.actionSize - 1 }, () => Math.random() < 0.03);
         
-
-
         // Ajouter un float entre -1 et 1 comme dernière valeur
         const randomFloat = Math.random() * 2 - 1;
     
@@ -125,7 +107,6 @@ class IADQN {
             //console.log(this.memory.length,"\r");
             return;
         }
-
         const batch = this._sampleBatch(batchSize);
         const states = batch.map(exp => exp.state);
         const nextStates = batch.map(exp => exp.nextState);
@@ -142,25 +123,11 @@ class IADQN {
             return qUpdate;
         });
 
-        //await this.model.fit(tf.tensor2d(states), tf.tensor2d(targets), { epochs: 1, verbose: 0 });
-        trainAsync(this.model, states, targets);
-        
+        await this.model.fit(tf.tensor2d(states), tf.tensor2d(targets), { epochs: 1, verbose: 0 });
+
         // Réduire epsilon pour diminuer l'exploration au fil du temps
         if (this.epsilon > this.epsilonMin) {
             this.epsilon *= this.epsilonDecay;
-        }
-    }
-
-    async trainAsync(model, states, targets) {
-        try {
-            await model.fit(
-                tf.tensor2d(states), 
-                tf.tensor2d(targets), 
-                { epochs: 1, verbose: 0 }
-            );
-            console.log("Entraînement terminé !");
-        } catch (err) {
-            console.error("Erreur d'entraînement :", err);
         }
     }
 
@@ -172,4 +139,4 @@ class IADQN {
     }
 }
 
-module.exports = IADQN;
+module.exports = IADQNgpu;

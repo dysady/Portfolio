@@ -373,6 +373,7 @@ const mechaIA = [{id:"iaRenforcement1",strat: new IADQN(stateSize, actionSize)},
 async function runIA(mechaIA) {
   try {
   while (true) {
+    const currentTimestampRefresh = Date.now();
     for (const element of mechaIA) {
       // Si le mecha n'existe pas encore, on le crée
       const currentTimestamp = Date.now();
@@ -384,7 +385,6 @@ async function runIA(mechaIA) {
       //console.log(gameState);
       const keys = await element.strat.act(gameState);
       //console.log(keys);
-      
       if (mechas[element.id]) {
         mechas[element.id].rotation = keys.rotation * Math.PI;
         
@@ -439,8 +439,12 @@ async function runIA(mechaIA) {
             mechas[element.id].cdShoot = currentTimestamp;
           }
         }
+
+
         let previousHealth = mechas[element.id].health;
+        //console.log('1');
         await delay(refreshDelay);
+        //console.log('2', Date.now());
         if (!mechas[element.id]) {
           await createMecha(element.id, currentTimestamp);
           reward+=-20;
@@ -450,21 +454,29 @@ async function runIA(mechaIA) {
         }
 
         if (element.strat instanceof  IADQN) {
-        const nextState = getStateNorm(element.id, mechas, bullets);
-        //console.log(nextState);
-        const done = checkIfDone(gameState);  // Vérifier si le jeu est terminé
-        //console.log("1");
-        element.strat.storeExperience(gameState, keys, reward, nextState, done);
-        //console.log("2");
-        await element.strat.train(1000);  // Entraîner l'IA
-        //console.log("3");
+          const nextState = getStateNorm(element.id, mechas, bullets);
+
+          const done = checkIfDone(gameState);  // Vérifier si le jeu est terminé
+
+          element.strat.storeExperience(gameState, keys, reward, nextState, done);
+
+          if (Math.random()<0.2) {
+            await element.strat.train();  // Entraîner l'IA
+          }
+          
+
         }
         
       }else {
         console.log("error BOT introuvable");
       }
     }
-    await new Promise(resolve => setTimeout(resolve, refreshDelay));
+    const timeForRefresh = Date.now()-currentTimestampRefresh;
+    if (timeForRefresh<refreshDelay) {
+      console.log(timeForRefresh);
+      await new Promise(resolve => setTimeout(resolve, timeForRefresh));
+    }
+    //await new Promise(resolve => setTimeout(resolve, refreshDelay));
   }
   } catch (error) {
     console.error("Erreur dans runIA :", error);
@@ -473,10 +485,10 @@ async function runIA(mechaIA) {
     await new Promise(resolve => setTimeout(resolve, 5000)); // 5 secondes d'attente
 
     // Redémarrer la fonction runIA
-    runIA(mechaIA);
+    //runIA(mechaIA);
   }
 }
-
+console.log('test');
 runIA(mechaIA);
 
 function checkIfDone(gameState) {
