@@ -92,10 +92,10 @@ check_node_installed
 check_npm_installed
 
 # Installer MongoDB si nécessaire
-install_mongodb
+#install_mongodb
 
 # Installer Redis si nécessaire
-install_redis
+#install_redis
 
 # Installer les dépendances du projet
 install_dependencies
